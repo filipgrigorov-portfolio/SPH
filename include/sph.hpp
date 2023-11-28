@@ -6,13 +6,15 @@
 
 namespace fluid {
 struct Particle {
-  // Note: (x, y, z)
-  Eigen::Vector2d position;
-  Eigen::Vector2d velocityField, forceField;
+  // Note: (x, y)
+  Eigen::Vector2f position;
+  Eigen::Vector2f velocityField, forceField;
 
   float pressure;
   float density;
 };
+
+// Smoothing kernels
 } // namespace fluid
 
 namespace fluid {
@@ -21,6 +23,12 @@ public:
   SPH(double camWidth, double camHeight, uint32_t cubeSize,
       float particleDiameter, std::vector<Particle> &fluidParticles);
   ~SPH() = default;
+
+  void updateParticlesDensity(std::vector<Particle> &fluidParticles,
+                              float density, float mass, float h,
+                              float gasConstant, float radius);
+  void timeIntegrate(std::vector<Particle> &fluidParticles, float dt,
+                     float mass, float containerWidth, float containerHeight);
 
 private:
 };

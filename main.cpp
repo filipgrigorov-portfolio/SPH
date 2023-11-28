@@ -17,6 +17,12 @@ static constexpr float GREEN = 0.5294117647f;
 static constexpr float BLUE = 1.0f;
 static constexpr float ALPHA = 1;
 
+static constexpr float MASS = 0.2;
+static constexpr float DENSITY = 997; // rest density for water
+static constexpr float VISCOSITY = 3.5;
+static constexpr float TIME_STEP = 1.f;
+static constexpr float GAS_CONST = 8.314; // J/mol.K
+
 static constexpr uint32_t CUBE_SIZE = 20;
 static std::vector<fluid::Particle> fluidParticles;
 static fluid::SPH sph(FRUSTRUM_HEIGHT, FRUSTRUM_WIDTH, CUBE_SIZE,
@@ -53,14 +59,27 @@ void renderFunction() {
     std::cout << "Rendering " << fluidParticles.size() << " particles"
               << std::endl;
     for (const auto &fluidParticle : fluidParticles) {
-      std::cout << fluidParticle.position(0) << "," << fluidParticle.position(1)
-                << std::endl;
+      // std::cout << fluidParticle.position(0) << "," <<
+      // fluidParticle.position(1)
+      //          << std::endl;
       glVertex2d(fluidParticle.position(0), fluidParticle.position(1));
     }
   }
   glEnd();
 
   glutSwapBuffers();
+}
+
+void updateStep() {
+  // Update density
+  sph.updateParticlesDensity(fluidParticles, DENSITY, MASS, particleDiameter,
+                             GAS_CONST, particleDiameter * 2);
+  // Update forces
+
+  // Time integration
+  // sph.timeIntegrate(fluidParticles, TIME_STEP, MASS);
+
+  glutPostRedisplay();
 }
 
 int main(int argc, char **argv) {
@@ -74,8 +93,9 @@ int main(int argc, char **argv) {
 
   // Note: Display and refresh of window
   glutDisplayFunc(renderFunction);
-  // glutIdleFunc(udateStep);
-  // glutKeyboardFunc(keyboardEvent);
+  glutIdleFunc(updateStep);
+  // glutKeyboardFunc(keyboardEvent); // TODO: move the tank around to slosh the
+  // water
 
   glutMainLoop();
 
