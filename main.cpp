@@ -6,6 +6,8 @@
 #include <GL/glut.h>
 
 namespace {
+uint64_t globalFrameCount = 0u;
+
 /// @brief Colors of fluid particles
 static constexpr float RED = 0.05490196078f;
 static constexpr float GREEN = 0.5294117647f;
@@ -70,7 +72,6 @@ void renderFunction() {
   glBegin(GL_POINTS);
   {
     // Note: Go through the particles
-    std::cout << "Rendering " << fluidParticles.size() << " particles" << std::endl;
     for (const auto &fluidParticle : fluidParticles) {
       glVertex2d(fluidParticle.position(0), fluidParticle.position(1));
     }
@@ -81,6 +82,8 @@ void renderFunction() {
 }
 
 void updateStep() {
+  std::cout << "Processing frame " << ++globalFrameCount << std::endl;
+
   // Update density
   sph.accumulateParticlesDensity(fluidParticles);
   // Update forces
