@@ -29,7 +29,7 @@ static std::unordered_map<std::string, float> fluidProps = {
 
 /// @brief Time integration properties (during simulation)
 // Note: If the time step is bigger, then simulation is not stable.
-static constexpr float TIME_STEP = 0.0005f;
+static constexpr float TIME_STEP = 0.0006f;
 static constexpr float DAMPING_SCALE = 0.2f;
 
 static constexpr uint32_t CUBE_SIZE = 20;
@@ -45,7 +45,7 @@ static fluid::SPH sph(
 
 void initOpenGL() {
   // Note: select background color
-  glClearColor(0.9f, 0.9f, 0.9f, 1);
+  glClearColor(0.f, 0.f, 0.f, 1);
 
   // Note: Remove aliasing
   glEnable(GL_POINT_SMOOTH);
