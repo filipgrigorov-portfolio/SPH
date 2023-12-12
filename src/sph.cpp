@@ -119,17 +119,20 @@ void SPH::timeIntegrate(std::vector<Particle> &fluidParticles, float dt, float d
       const float maxYValue = boundaryHeight - minValue;
       // Left or right
       if (particle.position(0) <= minValue || particle.position(0) >= maxXValue) {
-        // Note: Damping is applied as energy is lost to the boundary
-        particle.velocityField(0) *= -dampingScale;
-        particle.position(0) = clamp(particle.position(0), minValue, maxXValue);
+          // Note: Damping is applied as energy is lost to the boundary
+          particle.velocityField(0) *= -dampingScale;
+          particle.position(0) = clamp(particle.position(0), minValue, maxXValue);
       }
 
       // Top or bottom
       if (particle.position(1) <= minValue || particle.position(1) >= maxYValue) {
-        // Note: Damping is applied as energy is lost to the boundary
-        particle.velocityField(1) *= -dampingScale;
-        particle.position(1) = clamp(particle.position(1), minValue, maxXValue);
+          // Note: Damping is applied as energy is lost to the boundary
+          particle.velocityField(1) *= -dampingScale;
+          particle.position(1) = clamp(particle.position(1), minValue, maxXValue);
       }
+
+      // BCs
+
   }
 }
 } // namespace fluid
