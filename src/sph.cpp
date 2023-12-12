@@ -29,30 +29,30 @@ namespace fluid {
 SPH::SPH(float camWidth, float camHeight, uint32_t cubeSize, float particleSize, 
   std::unordered_map<std::string, float>& fluidProps, std::vector<Particle> &fluidParticles)
 : mParticleSize(particleSize) {
-  // Note: Initialize the global fluid properties
-  mRestDensity = fluidProps["rest_density"];
-  mGasConst = fluidProps["gas_const"];
-  mViscosity = fluidProps["viscosity"];
+    // Note: Initialize the global fluid properties
+    mRestDensity = fluidProps["rest_density"];
+    mGasConst = fluidProps["gas_const"];
+    mViscosity = fluidProps["viscosity"];
 
-  fluidParticles.reserve(cubeSize * cubeSize);
-  const auto startRowPos = 0.1 * camHeight;
-  const auto startColPos = 0.4 * camWidth;
-  const float& increment = particleSize;
-  const auto endRowPos = startRowPos + (cubeSize * increment);
-  const auto endColPos = startColPos + (cubeSize * increment);
-  for (float row = startRowPos; row < endRowPos; row += increment) {
-    for (float col = startColPos; col < endColPos; col += increment) {
-      const float rowUpdated = row / startRowPos;
-      const float colUpdated = col / startColPos;
-      const uint32_t idx = uint32_t(rowUpdated * cubeSize + colUpdated);
-      const Eigen::Vector2f randomPerturbation = {((float)rand() / (RAND_MAX)) + 1, ((float)rand() / (RAND_MAX)) + 1};
-      fluidParticles.push_back({Eigen::Vector2f(col, row) + randomPerturbation,
-                                Eigen::Vector2f(0.0, 0.0),
-                                Eigen::Vector2f(0.0, 0.0), 0.f, 0.f});
+    fluidParticles.reserve(cubeSize * cubeSize);
+    const auto startRowPos = 0.1 * camHeight;
+    const auto startColPos = 0.4 * camWidth;
+    const float& increment = particleSize;
+    const auto endRowPos = startRowPos + (cubeSize * increment);
+    const auto endColPos = startColPos + (cubeSize * increment);
+    for (float row = startRowPos; row < endRowPos; row += increment) {
+      for (float col = startColPos; col < endColPos; col += increment) {
+        const float rowUpdated = row / startRowPos;
+        const float colUpdated = col / startColPos;
+        const uint32_t idx = uint32_t(rowUpdated * cubeSize + colUpdated);
+        const Eigen::Vector2f randomPerturbation = {((float)rand() / (RAND_MAX)) + 1, ((float)rand() / (RAND_MAX)) + 1};
+        fluidParticles.push_back({Eigen::Vector2f(col, row) + randomPerturbation,
+                                  Eigen::Vector2f(0.0, 0.0),
+                                  Eigen::Vector2f(0.0, 0.0), 0.f, 0.f});
+      }
     }
-  }
 
-  std::cout << "Generated " << fluidParticles.size() << " particles" << std::endl;
+    std::cout << "Generated " << fluidParticles.size() << " particles" << std::endl;
 }
 
 void SPH::accumulateForces(std::vector<Particle> &fluidParticles) {
@@ -80,6 +80,7 @@ void SPH::accumulateForces(std::vector<Particle> &fluidParticles) {
             viscousForce += neighbour.mass * ((neighbour.velocityField - particle.velocityField) / neighbour.density) * viscosityLambda(l, h);
 
             // surface tension
+            //surfaceTensionForce += ;
         }
 
         viscousForce *= mViscosity;

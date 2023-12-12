@@ -23,23 +23,23 @@ struct Particle {
 namespace fluid {
 class SPH {
 public:
-  SPH(float camWidth, float camHeight, uint32_t cubeSize, float particleSize, 
-    std::unordered_map<std::string, float>& fluidProps, std::vector<Particle> &fluidParticles);
-  ~SPH() = default;
+    SPH(float camWidth, float camHeight, uint32_t cubeSize, float particleSize, 
+      std::unordered_map<std::string, float>& fluidProps, std::vector<Particle> &fluidParticles);
+    ~SPH() = default;
 
-  float getParticleSize() const { return mParticleSize; }
+    float getParticleSize() const { return mParticleSize; }
 
-  void accumulateForces(std::vector<Particle> &fluidParticles);
+    void accumulateForces(std::vector<Particle> &fluidParticles);
 
-  void accumulateParticlesDensity(std::vector<Particle> &fluidParticles);
+    void accumulateParticlesDensity(std::vector<Particle> &fluidParticles);
 
-  void timeIntegrate(std::vector<Particle> &fluidParticles, float dt, float dampingScale, float boundaryWidth, float boundaryHeight);
+    void timeIntegrate(std::vector<Particle> &fluidParticles, float dt, float dampingScale, float boundaryWidth, float boundaryHeight);
 
 private:
-  float mParticleSize = 12.f;
+    float mParticleSize = 12.f;
 
-  float mRestDensity;
-  float mGasConst;
-  float mViscosity;
+    float mRestDensity;
+    float mGasConst;
+    float mViscosity;
 };
 } // namespace fluid
