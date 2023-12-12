@@ -111,25 +111,25 @@ void SPH::accumulateParticlesDensity(std::vector<Particle> &fluidParticles) {
 */
 void SPH::timeIntegrate(std::vector<Particle> &fluidParticles, float dt, float dampingScale, float boundaryWidth, float boundaryHeight) {
   for (auto &particle : fluidParticles) {
-    particle.velocityField += dt * particle.forceField / particle.density;
-    particle.position += dt * particle.velocityField;
+      particle.velocityField += dt * particle.forceField / particle.density;
+      particle.position += dt * particle.velocityField;
 
-    const float minValue = mParticleSize;
-    const float maxXValue = boundaryWidth - minValue;
-    const float maxYValue = boundaryHeight - minValue;
-    // Left or right
-    if (particle.position(0) <= minValue || particle.position(0) >= maxXValue) {
-      // Note: Damping is applied as energy is lost to the boundary
-      particle.velocityField(0) *= -dampingScale;
-      particle.position(0) = clamp(particle.position(0), minValue, maxXValue);
-    }
+      const float minValue = mParticleSize;
+      const float maxXValue = boundaryWidth - minValue;
+      const float maxYValue = boundaryHeight - minValue;
+      // Left or right
+      if (particle.position(0) <= minValue || particle.position(0) >= maxXValue) {
+        // Note: Damping is applied as energy is lost to the boundary
+        particle.velocityField(0) *= -dampingScale;
+        particle.position(0) = clamp(particle.position(0), minValue, maxXValue);
+      }
 
-    // Top or bottom
-    if (particle.position(1) <= minValue || particle.position(1) >= maxYValue) {
-      // Note: Damping is applied as energy is lost to the boundary
-      particle.velocityField(1) *= -dampingScale;
-      particle.position(1) = clamp(particle.position(1), minValue, maxXValue);
-    }
+      // Top or bottom
+      if (particle.position(1) <= minValue || particle.position(1) >= maxYValue) {
+        // Note: Damping is applied as energy is lost to the boundary
+        particle.velocityField(1) *= -dampingScale;
+        particle.position(1) = clamp(particle.position(1), minValue, maxXValue);
+      }
   }
 }
 } // namespace fluid
