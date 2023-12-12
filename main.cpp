@@ -1,29 +1,46 @@
 #include <iostream>
+#include <unordered_map>
 
 #include "sph.hpp"
 
 #include <GL/glut.h>
 
 namespace {
-static constexpr int WINDOW_WIDTH = 800;
-static constexpr int WINDOW_HEIGHT = 600;
-static constexpr double FRUSTRUM_WIDTH = 1.2 * WINDOW_WIDTH;
-static constexpr double FRUSTRUM_HEIGHT = 1.2 * WINDOW_HEIGHT;
-
+/// @brief Colors of fluid particles
 static constexpr float RED = 0.05490196078f;
 static constexpr float GREEN = 0.5294117647f;
 static constexpr float BLUE = 1.0f;
 static constexpr float ALPHA = 1;
 
-static constexpr float REST_DENSITY = 200; // rest density for water (affects pressure forces)
-static constexpr float VISCOSITY = 200.f;
-static constexpr float TIME_STEP = 0.0005f; // Note: If the time step is bigger, then simulation is not stable
-static constexpr float GAS_CONST = 2000;
-static constexpr float DAMPING = 0.6f;
+/// @brief Properties to setting up openGL primitives
+static std::unordered_map<std::string, float> openGLProps = {
+    {"window_width", 400},
+    {"window_height", 300},
+    {"frustrum_width", 800},
+    {"frustrum_height", 600}
+};
+
+/// @brief Global fluid properties
+static std::unordered_map<std::string, float> fluidProps = {
+    {"rest_density", 400},
+    {"viscosity", 200},
+    {"gas_const", 2000}
+};
+
+/// @brief Time integration properties (during simulation)
+// Note: If the time step is bigger, then simulation is not stable.
+static constexpr float TIME_STEP = 0.0005f;
+static constexpr float DAMPING_SCALE = 0.2f;
 
 static constexpr uint32_t CUBE_SIZE = 20;
+
+// Note: The particles have to be defined global due to OpenGL
 static std::vector<fluid::Particle> fluidParticles;
-static fluid::SPH sph(FRUSTRUM_HEIGHT, FRUSTRUM_WIDTH, CUBE_SIZE, 20.f, fluidParticles);
+static fluid::SPH sph(
+  openGLProps["frustrum_height"], openGLProps["frustrum_width"], 
+  CUBE_SIZE, 18.f, 
+  fluidProps,
+  fluidParticles);
 } // namespace
 
 void initOpenGL() {
@@ -39,7 +56,7 @@ void initOpenGL() {
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
   // Note: multiply the current matrix with an orthographic matrix
-  glOrtho(0.0, FRUSTRUM_WIDTH, 0.0, FRUSTRUM_HEIGHT, 0.0, 1.0);
+  glOrtho(0.0, openGLProps["frustrum_width"], 0.0, openGLProps["frustrum_height"], 0.0, 1.0);
 }
 
 // Note: Incovenient but it uses global static variables
@@ -47,16 +64,14 @@ void renderFunction() {
   // Clear all pixels
   glClear(GL_COLOR_BUFFER_BIT);
 
-  // Note: Color of the fluid particles, R,G,B,Alpha
+  // Note: Color of the fluid particles, (R, G, B, Alpha)
   glColor4f(RED, GREEN, BLUE, ALPHA);
 
   glBegin(GL_POINTS);
   {
     // Note: Go through the particles
-    std::cout << "Rendering " << fluidParticles.size() << " particles"
-              << std::endl;
+    std::cout << "Rendering " << fluidParticles.size() << " particles" << std::endl;
     for (const auto &fluidParticle : fluidParticles) {
-      // std::cout << fluidParticle.position(0) << "," << fluidParticle.position(1) << std::endl;
       glVertex2d(fluidParticle.position(0), fluidParticle.position(1));
     }
   }
@@ -67,17 +82,17 @@ void renderFunction() {
 
 void updateStep() {
   // Update density
-  sph.accumulateParticlesDensity(fluidParticles, REST_DENSITY, GAS_CONST);
+  sph.accumulateParticlesDensity(fluidParticles);
   // Update forces
-  sph.accumulateForces(fluidParticles, VISCOSITY);
+  sph.accumulateForces(fluidParticles);
   // Time integration
-  sph.timeIntegrate(fluidParticles, TIME_STEP, REST_DENSITY, DAMPING, FRUSTRUM_WIDTH, FRUSTRUM_HEIGHT);
+  sph.timeIntegrate(fluidParticles, TIME_STEP, DAMPING_SCALE, openGLProps["frustrum_width"], openGLProps["frustrum_height"]);
 
   glutPostRedisplay();
 }
 
 int main(int argc, char **argv) {
-  glutInitWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
+  glutInitWindowSize(openGLProps["window_width"], openGLProps["window_height"]);
   glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB);
   glutInit(&argc, argv);
   glutCreateWindow("SPH 3D");
@@ -88,8 +103,6 @@ int main(int argc, char **argv) {
   // Note: Display and refresh of window
   glutDisplayFunc(renderFunction);
   glutIdleFunc(updateStep);
-  // glutKeyboardFunc(keyboardEvent); // TODO: move the tank around to slosh the
-  // water
 
   glutMainLoop();
 

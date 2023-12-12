@@ -1,5 +1,6 @@
 #pragma once
 
+#include <unordered_map>
 #include <vector>
 
 #include <eigen3/Eigen/Dense>
@@ -22,19 +23,23 @@ struct Particle {
 namespace fluid {
 class SPH {
 public:
-  SPH(double camWidth, double camHeight, uint32_t cubeSize,
-      float particleSize, std::vector<Particle> &fluidParticles);
+  SPH(float camWidth, float camHeight, uint32_t cubeSize, float particleSize, 
+    std::unordered_map<std::string, float>& fluidProps, std::vector<Particle> &fluidParticles);
   ~SPH() = default;
 
   float getParticleSize() const { return mParticleSize; }
 
-  void accumulateForces(std::vector<Particle> &fluidParticles, float viscosity);
+  void accumulateForces(std::vector<Particle> &fluidParticles);
 
-  void accumulateParticlesDensity(std::vector<Particle> &fluidParticles, float restDensity, float gasConstant);
+  void accumulateParticlesDensity(std::vector<Particle> &fluidParticles);
 
-  void timeIntegrate(std::vector<Particle> &fluidParticles, float dt, float mass, float damping, float containerWidth, float containerHeight);
+  void timeIntegrate(std::vector<Particle> &fluidParticles, float dt, float dampingScale, float boundaryWidth, float boundaryHeight);
 
 private:
   float mParticleSize = 12.f;
+
+  float mRestDensity;
+  float mGasConst;
+  float mViscosity;
 };
 } // namespace fluid

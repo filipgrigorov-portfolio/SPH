@@ -4,11 +4,13 @@
 #include <iostream>
 
 namespace {
+constexpr float GRAVITY_ACC = 9.81f;
 float clamp(float currentValue, float minValue, float maxValue) {
     return std::max(minValue, std::min(currentValue, maxValue));
 }
 
 // Note: According to "SPH Based Shallow Water Simulation" by Solenthaler
+/// @brief Smoothing kernels
 auto poly6Lambda = [](float lSquared, float h) -> float {
     const float hSquared = h * h;
     return (lSquared <= hSquared) ? 4.f / (M_PI * std::pow(h, 8)) * std::pow(hSquared - lSquared, 3.f) : 0.f;
@@ -19,27 +21,19 @@ auto spikyLambda = [](float l, float h) -> float {
 auto viscosityLambda = [](float l, float h) -> float {
     return (l <= h) ? 40.f / (M_PI * std::pow(h, 5)) * (h - l) : 0.f;
 };
-
-std::vector<fluid::Particle>
-findNeighbouringParticles(const fluid::Particle &particle, const std::vector<fluid::Particle> &fluidParticles, float h) {
-    std::vector<fluid::Particle> neighbours;
-    neighbours.reserve(20);
-    // Naive implementation
-    for (const auto &potentialNeighbour : fluidParticles) {
-      if ((particle.position - potentialNeighbour.position).norm() <= h) {
-        neighbours.emplace_back(particle);
-      }
-    }
-    return neighbours;
-}
 } // namespace
 
 namespace fluid {
 /// @brief This class represents the "average" fluid attributes for each
 /// particle based on its neighbours in a given radius R
-SPH::SPH(double camWidth, double camHeight, uint32_t cubeSize,
-         float particleSize, std::vector<Particle> &fluidParticles)
-    : mParticleSize(particleSize) {
+SPH::SPH(float camWidth, float camHeight, uint32_t cubeSize, float particleSize, 
+  std::unordered_map<std::string, float>& fluidProps, std::vector<Particle> &fluidParticles)
+: mParticleSize(particleSize) {
+  // Note: Initialize the global fluid properties
+  mRestDensity = fluidProps["rest_density"];
+  mGasConst = fluidProps["gas_const"];
+  mViscosity = fluidProps["viscosity"];
+
   fluidParticles.reserve(cubeSize * cubeSize);
   const auto startRowPos = 0.2 * camHeight;
   const auto startColPos = 0.1 * camWidth;
@@ -59,20 +53,16 @@ SPH::SPH(double camWidth, double camHeight, uint32_t cubeSize,
     }
   }
 
-  std::cout << "Generated " << fluidParticles.size() << " particles"
-            << std::endl;
+  std::cout << "Generated " << fluidParticles.size() << " particles" << std::endl;
 }
 
-void SPH::accumulateForces(std::vector<Particle> &fluidParticles, float viscosity) {
+void SPH::accumulateForces(std::vector<Particle> &fluidParticles) {
     const float& h = mParticleSize;
     for (auto& particle : fluidParticles) {
         Eigen::Vector2f pressureForce{0.f, 0.f};
         Eigen::Vector2f viscousForce{0.f, 0.f};
-        Eigen::Vector2f gravityForce{0.f, -9.81f};
+        Eigen::Vector2f gravityForce{0.f, -GRAVITY_ACC};
         Eigen::Vector2f surfaceTensionForce{0.f, 0.f};
-        
-        //std::vector<Particle> neighbours = findNeighbouringParticles(particle, fluidParticles, h, "l1");
-        //std::cout << "Found " << neighbours.size() << " neighbours" << std::endl;
 
         for (const auto& neighbour : fluidParticles) {
             if (neighbour.position == particle.position) {
@@ -93,12 +83,12 @@ void SPH::accumulateForces(std::vector<Particle> &fluidParticles, float viscosit
             // surface tension
         }
 
-        viscousForce *= viscosity;
+        viscousForce *= mViscosity;
         particle.forceField = pressureForce + viscousForce + gravityForce * particle.mass / particle.density + surfaceTensionForce;
     }
 }
 
-void SPH::accumulateParticlesDensity(std::vector<Particle> &fluidParticles, float restDensity, float gasConstant) {
+void SPH::accumulateParticlesDensity(std::vector<Particle> &fluidParticles) {
     const float& h = mParticleSize;
     for (auto &particle : fluidParticles) {
         particle.density = 0.f; // init at every step        
@@ -108,7 +98,7 @@ void SPH::accumulateParticlesDensity(std::vector<Particle> &fluidParticles, floa
         }
 
         // Update pressure (Tait equation, suggested by Desbrun)
-        particle.pressure = gasConstant * (particle.density - restDensity);
+        particle.pressure = mGasConst * (particle.density - mRestDensity);
     }
 }
 
@@ -119,27 +109,25 @@ void SPH::accumulateParticlesDensity(std::vector<Particle> &fluidParticles, floa
   * v_t+1 = v_t + dt * F_tot / density
   * p_t+1 = p_t + dt * v_t+1
 */
-void SPH::timeIntegrate(std::vector<Particle> &fluidParticles, float dt,
-                        float mass, float damping, float containerWidth,
-                        float containerHeight) {
+void SPH::timeIntegrate(std::vector<Particle> &fluidParticles, float dt, float dampingScale, float boundaryWidth, float boundaryHeight) {
   for (auto &particle : fluidParticles) {
     particle.velocityField += dt * particle.forceField / particle.density;
     particle.position += dt * particle.velocityField;
 
     const float minValue = mParticleSize;
-    const float maxXValue = containerWidth - minValue;
-    const float maxYValue = containerHeight - minValue;
+    const float maxXValue = boundaryWidth - minValue;
+    const float maxYValue = boundaryHeight - minValue;
     // Left or right
     if (particle.position(0) <= minValue || particle.position(0) >= maxXValue) {
       // Note: Damping is applied as energy is lost to the boundary
-      particle.velocityField(0) *= -damping;
+      particle.velocityField(0) *= -dampingScale;
       particle.position(0) = clamp(particle.position(0), minValue, maxXValue);
     }
 
     // Top or bottom
     if (particle.position(1) <= minValue || particle.position(1) >= maxYValue) {
       // Note: Damping is applied as energy is lost to the boundary
-      particle.velocityField(1) *= -damping;
+      particle.velocityField(1) *= -dampingScale;
       particle.position(1) = clamp(particle.position(1), minValue, maxXValue);
     }
   }
