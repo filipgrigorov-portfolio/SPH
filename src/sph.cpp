@@ -35,8 +35,8 @@ SPH::SPH(float camWidth, float camHeight, uint32_t cubeSize, float particleSize,
   mViscosity = fluidProps["viscosity"];
 
   fluidParticles.reserve(cubeSize * cubeSize);
-  const auto startRowPos = 0.2 * camHeight;
-  const auto startColPos = 0.1 * camWidth;
+  const auto startRowPos = 0.1 * camHeight;
+  const auto startColPos = 0.4 * camWidth;
   const float& increment = particleSize;
   const auto endRowPos = startRowPos + (cubeSize * increment);
   const auto endColPos = startColPos + (cubeSize * increment);
@@ -45,11 +45,10 @@ SPH::SPH(float camWidth, float camHeight, uint32_t cubeSize, float particleSize,
       const float rowUpdated = row / startRowPos;
       const float colUpdated = col / startColPos;
       const uint32_t idx = uint32_t(rowUpdated * cubeSize + colUpdated);
-      float jitter = static_cast<float>(random()) / static_cast<float>(RAND_MAX);
-      fluidParticles.push_back({Eigen::Vector2f(col + jitter * 0.5, row),
+      const Eigen::Vector2f randomPerturbation = {((float)rand() / (RAND_MAX)) + 1, ((float)rand() / (RAND_MAX)) + 1};
+      fluidParticles.push_back({Eigen::Vector2f(col, row) + randomPerturbation,
                                 Eigen::Vector2f(0.0, 0.0),
                                 Eigen::Vector2f(0.0, 0.0), 0.f, 0.f});
-      std::cout << fluidParticles.back().position(0) << " ";//debug
     }
   }
 
