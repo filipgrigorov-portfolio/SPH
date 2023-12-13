@@ -29,6 +29,9 @@ public:
 
     float getParticleSize() const { return mParticleSize; }
 
+    void setSemiCircularBoundary(const std::string& cmdArg);
+    void setSemiCircularBoundary(const std::string& cmdArg1, const std::string& cmdArg2);
+
     void accumulateForces(std::vector<Particle> &fluidParticles);
 
     void accumulateParticlesDensity(std::vector<Particle> &fluidParticles);
@@ -36,6 +39,9 @@ public:
     void timeIntegrate(std::vector<Particle> &fluidParticles, float dt, float dampingScale, float boundaryWidth, float boundaryHeight);
 
 private:
+    bool mIsSemiCircularBoundaryEnabled = false;
+    bool mIsSemiCircularBoundaryRunWithPenetration = false;
+
     float mParticleSize = 12.f;
 
     float mRestDensity;

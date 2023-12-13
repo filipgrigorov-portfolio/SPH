@@ -29,10 +29,10 @@ static std::unordered_map<std::string, float> openGLProps = {
 
 /// @brief Global fluid properties
 static std::unordered_map<std::string, float> fluidProps = {
-    {"rest_density", 400},
-    {"viscosity", 200},
+    {"rest_density", 350},
+    {"viscosity", 300},
     {"gas_const", 2000},
-    {"surface_tension", 0.073f}
+    {"surface_tension", 0.073f} // Note: For water/air
 };
 
 /// @brief Time integration properties (during simulation)
@@ -40,6 +40,7 @@ static std::unordered_map<std::string, float> fluidProps = {
 static constexpr float TIME_STEP = 0.0006f;
 static constexpr float DAMPING_SCALE = 0.2f;
 
+/// @brief Constant to specify the size of the cube configuration of the fluid
 static constexpr uint32_t CUBE_SIZE = 20u;
 
 // Note: The particles have to be defined global due to OpenGL
@@ -108,6 +109,12 @@ int main(int argc, char **argv) {
 
     // Note: Intialize the openGL parameters
     initOpenGL();
+
+    if (argc == 2) {
+        sph.setSemiCircularBoundary({argv[1]});
+    } else if (argc == 3) {
+        sph.setSemiCircularBoundary({argv[1]}, {argv[2]});
+    }
 
     // Note: Display and refresh of window
     glutDisplayFunc(renderFunction);

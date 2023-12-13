@@ -56,6 +56,26 @@ SPH::SPH(float camWidth, float camHeight, uint32_t cubeSize, float particleSize,
     std::cout << "Generated " << fluidParticles.size() << " particles" << std::endl;
 }
 
+void SPH::setSemiCircularBoundary(const std::string& cliArg) {
+    if (!cliArg.empty()) {
+        if (cliArg == "on") {
+            mIsSemiCircularBoundaryEnabled = true;
+        }
+    }
+}
+
+void SPH::setSemiCircularBoundary(const std::string& cmdArg1, const std::string& cmdArg2) {
+    if (!cmdArg1.empty() && !cmdArg2.empty()) {
+        if (cmdArg1 == "on") {
+            mIsSemiCircularBoundaryEnabled = true;
+        }
+        
+        if (cmdArg2 == "with_penetration") {
+            mIsSemiCircularBoundaryRunWithPenetration = true;
+        }
+    }
+}
+
 void SPH::accumulateForces(std::vector<Particle> &fluidParticles) {
     const float& h = mParticleSize;
     for (auto& particle : fluidParticles) {
@@ -111,65 +131,71 @@ void SPH::accumulateParticlesDensity(std::vector<Particle> &fluidParticles) {
   * p_t+1 = p_t + dt * v_t+1
 */
 void SPH::timeIntegrate(std::vector<Particle> &fluidParticles, float dt, float dampingScale, float boundaryWidth, float boundaryHeight) {
-  for (auto &particle : fluidParticles) {
-      particle.velocityField += dt * particle.forceField / particle.density;
-      particle.position += dt * particle.velocityField;
+    for (auto &particle : fluidParticles) {
+        particle.velocityField += dt * particle.forceField / particle.density;
+        particle.position += dt * particle.velocityField;
 
-      const float minValue = mParticleSize;
-      const float maxXValue = boundaryWidth - minValue;
-      const float maxYValue = boundaryHeight - minValue;
-      // Left or right
-      if (particle.position(0) <= minValue || particle.position(0) >= maxXValue) {
-          // Note: Damping is applied as energy is lost to the boundary
-          particle.velocityField(0) *= -dampingScale;
-          particle.position(0) = clamp(particle.position(0), minValue, maxXValue);
-      }
+        const float minValue = mParticleSize;
+        const float maxXValue = boundaryWidth - minValue;
+        const float maxYValue = boundaryHeight - minValue;
+        // Left or right
+        if (particle.position(0) <= minValue || particle.position(0) >= maxXValue) {
+            // Note: Damping is applied as energy is lost to the boundary
+            particle.velocityField(0) *= -dampingScale;
+            particle.position(0) = clamp(particle.position(0), minValue, maxXValue);
+        }
 
-      // Top or bottom
-      if (particle.position(1) <= minValue || particle.position(1) >= maxYValue) {
-          // Note: Damping is applied as energy is lost to the boundary
-          particle.velocityField(1) *= -dampingScale;
-          particle.position(1) = clamp(particle.position(1), minValue, maxXValue);
-      }
+        // Top or bottom
+        if (particle.position(1) <= minValue || particle.position(1) >= maxYValue) {
+            // Note: Damping is applied as energy is lost to the boundary
+            particle.velocityField(1) *= -dampingScale;
+            particle.position(1) = clamp(particle.position(1), minValue, maxXValue);
+        }
 
-      // TODO:
-      // BCs: center location, o = [0.5 * boundaryWidth, 0.9 * boundaryHeight] -> circular BC
-      static const Eigen::Vector2f bcOrigin{0.5 * boundaryWidth, 0.01 * boundaryHeight};
-      static float bcRadius = 5 * mParticleSize;
-      Eigen::Vector2f normal = bcOrigin - particle.position;
-      Eigen::Vector2f unitNormal = -normal.normalized() * dampingScale;
-      if (normal.squaredNorm() <= bcRadius * bcRadius) {
-          particle.velocityField(0) *= unitNormal(0);
-          particle.velocityField(1) *= unitNormal(1);
-          particle.position += dt * particle.velocityField;
+        // Note: Not that stable, it requires further work but I wanted to experiment
+        if (mIsSemiCircularBoundaryEnabled) {
+            // BCs: center location, o = [0.5 * boundaryWidth, 0.01 * boundaryHeight] -> circular BC
+            static constexpr float X_OFFSET = 0.5f;
+            static constexpr float Y_OFFSET = 0.01f;
+            static const Eigen::Vector2f bcOrigin{X_OFFSET * boundaryWidth, Y_OFFSET * boundaryHeight};
+            static float bcRadius = 5 * mParticleSize;
+            Eigen::Vector2f normal = bcOrigin - particle.position;
+            Eigen::Vector2f unitNormal = -normal.normalized() * dampingScale;
+            if (normal.squaredNorm() <= bcRadius * bcRadius) {
+                particle.velocityField(0) *= unitNormal(0);
+                particle.velocityField(1) *= unitNormal(1);
 
-          //particle.position(0) = bcOrigin(0) + bcRadius;
-          //particle.position(1) = bcOrigin(1) + bcRadius;
+                if (mIsSemiCircularBoundaryRunWithPenetration) {
+                    particle.position += dt * particle.velocityField;
+                } else {
+                    const float x = std::fabs(particle.position(0) - bcOrigin(0));
+                    const float y = std::fabs(particle.position(1) - bcOrigin(1));
+                    const float theta = std::atan2(y, x);
 
-          // Note: Before the 90 degree mark
-          /*if (particle.position(0) < particle.position(0) + bcRadius) {
-              const float theta = std::atan2(particle.position(1), particle.position(0));
-              particle.position(0) += bcRadius * std::cos(theta);
-              particle.position(1) = bcRadius + mParticleSize * std::sin(theta);
-          }
+                    // Note: Before the 90 degree mark
+                    if (theta < M_PI / 2) {
+                        particle.position(0) += bcRadius * std::cos(theta);
+                        particle.position(1) = bcRadius + mParticleSize * std::sin(theta);
+                    }
 
-          // Note: After the 90 degree mark
-          if (particle.position(0) = particle.position(0) + bcRadius) {
-              const float theta = std::atan2(particle.position(1), particle.position(0));
-              particle.position(0) = bcRadius * std::cos(theta);
-              particle.position(1) = bcRadius + mParticleSize * std::sin(theta);
-          }
+                    // Note: After the 90 degree mark
+                    if (theta > M_PI / 2) {
+                        particle.position(0) = bcRadius * std::cos(theta);
+                        particle.position(1) = bcRadius + mParticleSize * std::sin(theta);
+                    }
 
-          // Note: At the 90 degree mark
-          if (particle.position(0) == particle.position(0) + bcRadius) {
-              particle.position(1) = bcRadius;
-          }
+                    // Note: At the 90 degree mark
+                    if (theta == M_PI / 2) {
+                        particle.position(1) = bcRadius;
+                    }
 
-          // Note: At theta = 0 or pi
-          if (particle.position(1) == 0) {
-              particle.position(0) = bcRadius;
-          }*/
-      }
-  }
+                    // Note: At theta = 0 or pi
+                    if (theta == 0 || theta == M_PI) {
+                        particle.position(0) = bcRadius;
+                    }
+                }
+            }
+        }
+    }
 }
 } // namespace fluid
