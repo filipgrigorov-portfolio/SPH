@@ -33,6 +33,7 @@ SPH::SPH(float camWidth, float camHeight, uint32_t cubeSize, float particleSize,
     mRestDensity = fluidProps["rest_density"];
     mGasConst = fluidProps["gas_const"];
     mViscosity = fluidProps["viscosity"];
+    mSurfaceTension = fluidProps["surface_tension"];
 
     fluidParticles.reserve(cubeSize * cubeSize);
     const auto startRowPos = 0.1 * camHeight;
@@ -80,7 +81,7 @@ void SPH::accumulateForces(std::vector<Particle> &fluidParticles) {
             viscousForce += neighbour.mass * ((neighbour.velocityField - particle.velocityField) / neighbour.density) * viscosityLambda(l, h);
 
             // surface tension
-            //surfaceTensionForce += ;
+            surfaceTensionForce += -mSurfaceTension * viscosityLambda(l, h) * unitDirection;
         }
 
         viscousForce *= mViscosity;
@@ -131,8 +132,44 @@ void SPH::timeIntegrate(std::vector<Particle> &fluidParticles, float dt, float d
           particle.position(1) = clamp(particle.position(1), minValue, maxXValue);
       }
 
-      // BCs
+      // TODO:
+      // BCs: center location, o = [0.5 * boundaryWidth, 0.9 * boundaryHeight] -> circular BC
+      static const Eigen::Vector2f bcOrigin{0.5 * boundaryWidth, 0.01 * boundaryHeight};
+      static float bcRadius = 5 * mParticleSize;
+      Eigen::Vector2f normal = bcOrigin - particle.position;
+      Eigen::Vector2f unitNormal = -normal.normalized() * dampingScale;
+      if (normal.squaredNorm() <= bcRadius * bcRadius) {
+          particle.velocityField(0) *= unitNormal(0);
+          particle.velocityField(1) *= unitNormal(1);
+          particle.position += dt * particle.velocityField;
 
+          //particle.position(0) = bcOrigin(0) + bcRadius;
+          //particle.position(1) = bcOrigin(1) + bcRadius;
+
+          // Note: Before the 90 degree mark
+          /*if (particle.position(0) < particle.position(0) + bcRadius) {
+              const float theta = std::atan2(particle.position(1), particle.position(0));
+              particle.position(0) += bcRadius * std::cos(theta);
+              particle.position(1) = bcRadius + mParticleSize * std::sin(theta);
+          }
+
+          // Note: After the 90 degree mark
+          if (particle.position(0) = particle.position(0) + bcRadius) {
+              const float theta = std::atan2(particle.position(1), particle.position(0));
+              particle.position(0) = bcRadius * std::cos(theta);
+              particle.position(1) = bcRadius + mParticleSize * std::sin(theta);
+          }
+
+          // Note: At the 90 degree mark
+          if (particle.position(0) == particle.position(0) + bcRadius) {
+              particle.position(1) = bcRadius;
+          }
+
+          // Note: At theta = 0 or pi
+          if (particle.position(1) == 0) {
+              particle.position(0) = bcRadius;
+          }*/
+      }
   }
 }
 } // namespace fluid

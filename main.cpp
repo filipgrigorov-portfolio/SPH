@@ -31,7 +31,8 @@ static std::unordered_map<std::string, float> openGLProps = {
 static std::unordered_map<std::string, float> fluidProps = {
     {"rest_density", 400},
     {"viscosity", 200},
-    {"gas_const", 2000}
+    {"gas_const", 2000},
+    {"surface_tension", 0.073f}
 };
 
 /// @brief Time integration properties (during simulation)

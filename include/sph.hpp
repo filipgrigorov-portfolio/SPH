@@ -41,5 +41,6 @@ private:
     float mRestDensity;
     float mGasConst;
     float mViscosity;
+    float mSurfaceTension;
 };
 } // namespace fluid
